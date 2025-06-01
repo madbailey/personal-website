@@ -28,6 +28,18 @@ out/
 .env.production.local
 .env*.local
 
+# Fonts
+*.woff
+*.woff2
+*.ttf
+*.otf
+*.eot
+*.svg
+fonts/
+static/fonts/
+assets/fonts/
+public/fonts/
+
 # Runtime data
 pids
 *.pid
