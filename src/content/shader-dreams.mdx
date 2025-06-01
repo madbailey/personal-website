@@ -1,0 +1,78 @@
+---
+title: "Shader Dreams"
+slug: "shader-dreams"
+date: "2026-06-01"
+excerpt: "A demonstration of how to embed interactive shaders in your stories..."
+---
+
+import ShaderCanvas from '../components/ShaderCanvas'
+
+# Shader Dreams
+
+This is how you can embed interactive shaders directly in your stories. The shader below creates a flowing, colorful pattern that responds to time:
+
+<ShaderCanvas 
+  fragmentShader={`
+    precision mediump float;
+    uniform float time;
+    uniform vec2 resolution;
+    
+    void main() {
+      vec2 uv = (gl_FragCoord.xy - 0.5 * resolution.xy) / resolution.y;
+      
+      // Create flowing patterns
+      float wave1 = sin(uv.x * 5.0 + time) * 0.5;
+      float wave2 = cos(uv.y * 3.0 + time * 0.7) * 0.5;
+      float wave3 = sin(length(uv) * 8.0 - time * 2.0);
+      
+      // Mix colors
+      vec3 color = vec3(
+        0.5 + 0.5 * sin(time + uv.x + wave1),
+        0.5 + 0.5 * cos(time + uv.y + wave2), 
+        0.5 + 0.5 * sin(time + wave3)
+      );
+      
+      // Add some brightness variation
+      color *= 0.8 + 0.3 * wave3;
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `}
+  width={500}
+  height={300}
+/>
+
+You can customize the shader by:
+- Modifying the fragment shader code
+- Adjusting the dimensions
+- Passing custom uniforms
+- Creating interactive controls
+
+## Another Example
+
+Here's a simpler pattern:
+
+<ShaderCanvas 
+  fragmentShader={`
+    precision mediump float;
+    uniform float time;
+    uniform vec2 resolution;
+    
+    void main() {
+      vec2 uv = gl_FragCoord.xy / resolution.xy;
+      
+      // Simple moving gradient
+      vec3 color = vec3(
+        uv.x + 0.3 * sin(time),
+        uv.y + 0.3 * cos(time * 0.7),
+        0.5 + 0.5 * sin(time * 0.3)
+      );
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `}
+  width={300}
+  height={200}
+/>
+
+This MDX approach gives you complete flexibility to create rich, interactive content while keeping your writing workflow simple and organized. 

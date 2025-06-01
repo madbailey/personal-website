@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Minimal, artistic styling for personal story site */
+@layer base {
+  :root {
+    --background: 48 100% 99%;        /* Light warm white (#fffff8) */
+    --foreground: 0 0% 15%;          /* Soft dark text (#262626) */
+    --card: 48 100% 99%;             /* Same as background */
+    --card-foreground: 0 0% 15%;     /* Soft dark text */
+    --popover: 48 100% 99%;          /* Same as background */
+    --popover-foreground: 0 0% 15%;  /* Soft dark text */
+    --primary: 0 0% 15%;             /* Soft dark primary */
+    --primary-foreground: 48 100% 99%; /* Light on dark */
+    --secondary: 40 20% 96%;         /* Very subtle secondary */
+    --secondary-foreground: 0 0% 15%; /* Soft dark text */
+    --muted: 40 20% 96%;             /* Very subtle muted */
+    --muted-foreground: 0 0% 40%;    /* Medium gray text */
+    --accent: 220 13% 30%;           /* Subtle blue-gray accent */
+    --accent-foreground: 48 100% 99%; /* Light on accent */
+    --destructive: 0 84.2% 60.2%;    /* Red for errors */
+    --destructive-foreground: 48 100% 99%; /* Light on red */
+    --border: 40 20% 92%;            /* Very subtle border */
+    --input: 40 20% 92%;             /* Input background */
+    --ring: 0 0% 15%;                /* Focus ring */
+    
+    --radius: 0.25rem; /* Smaller, more minimal radius */
+  }
+
+  /* Dark mode with subtle adjustments */
+  [data-theme="dark"] {
+    --background: 220 13% 5%;         /* Very dark blue-gray */
+    --foreground: 48 100% 95%;        /* Warm off-white */
+    --card: 220 13% 5%;               /* Same as background */
+    --card-foreground: 48 100% 95%;   /* Warm off-white */
+    --popover: 220 13% 5%;            /* Same as background */
+    --popover-foreground: 48 100% 95%; /* Warm off-white */
+    --primary: 48 100% 95%;           /* Light primary in dark mode */
+    --primary-foreground: 220 13% 5%; /* Dark on light */
+    --secondary: 220 13% 8%;          /* Slightly lighter dark */
+    --secondary-foreground: 48 100% 95%; /* Light text */
+    --muted: 220 13% 8%;              /* Slightly lighter dark */
+    --muted-foreground: 0 0% 65%;     /* Medium light gray */
+    --accent: 220 13% 80%;            /* Light accent in dark */
+    --accent-foreground: 220 13% 5%;  /* Dark on light accent */
+    --border: 220 13% 12%;            /* Subtle dark border */
+    --input: 220 13% 12%;             /* Input background */
+    --ring: 48 100% 95%;              /* Light focus ring */
+  }
+
+  /* Font faces for artistic typography */
+  @font-face {
+    font-family: et-book;
+    src: url('/media/et-book-roman-line-figures.woff') format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: et-book;
+    src: url('/media/et-book-italic.woff2') format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: et-book;
+    src: url('/media/et-book-bold-line-figures.woff') format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  /* Global body styling for minimal aesthetic */
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    @apply font-serif leading-loose;
+    @apply transition-colors duration-500;
+    font-feature-settings: "liga", "kern";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Enhanced typography for story content */
+  .story-content {
+    @apply max-w-2xl mx-auto px-8 py-16;
+    @apply text-base leading-loose;
+    @apply font-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .story-content h1 {
+    @apply text-2xl md:text-3xl font-light mb-16 text-center;
+    @apply tracking-wide leading-tight;
+    color: hsl(var(--foreground));
+  }
+
+  .story-content h2 {
+    @apply text-xl font-light mt-20 mb-8;
+    @apply tracking-wide;
+    color: hsl(var(--foreground));
+  }
+
+  .story-content p {
+    @apply mb-8 text-justify;
+    @apply leading-loose;
+    color: hsl(var(--foreground));
+    hyphens: auto;
+  }
+
+  /* Elegant first letter for story openings */
+  .story-content p:first-of-type::first-letter {
+    @apply text-4xl font-light float-left mr-2 leading-none;
+    color: hsl(var(--accent));
+    font-family: 'et-book', serif;
+  }
+
+  /* Selection styling */
+  ::selection {
+    background-color: hsla(var(--accent) / 0.2);
+    color: hsl(var(--foreground));
+  }
+
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Remove the heavy nav-link and story-card styles */
+  /* Keep only essential components */
+  
+  /* Minimal button styles when needed */
+  .btn-minimal {
+    @apply text-sm font-light tracking-wide;
+    @apply hover:opacity-60 transition-all duration-500;
+    @apply focus:outline-none focus:opacity-60;
+    color: hsl(var(--foreground));
+  }
+
+  /* Shader/art container with minimal styling */
+  .shader-container {
+    @apply relative overflow-hidden;
+    @apply flex items-center justify-center;
+  }
+}
+
+@layer utilities {
+  /* Enhanced typography utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Breathing room utilities */
+  .space-y-massive > * + * {
+    margin-top: 8rem;
+  }
+
+  .space-y-generous > * + * {
+    margin-top: 4rem;
+  }
+
+  /* Minimal animations */
+  .fade-in-up {
+    animation: fadeInUp 1s ease-out forwards;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Subtle floating animation */
+  .float-subtle {
+    animation: floatSubtle 8s ease-in-out infinite;
+  }
+
+  @keyframes floatSubtle {
+    0%, 100% { 
+      transform: translateY(0px); 
+    }
+    50% { 
+      transform: translateY(-5px); 
+    }
+  }
+
+  /* Focus states for accessibility */
+  .focus-minimal:focus {
+    outline: 1px solid hsla(var(--foreground) / 0.3);
+    outline-offset: 2px;
+  }
+}
