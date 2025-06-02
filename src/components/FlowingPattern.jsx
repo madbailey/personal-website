@@ -18,7 +18,7 @@ const FlowingPattern = () => {
     let lastMouseY = mouseY;
 
     const flowPoints = [];
-    const gridSize = 8;
+    const gridSize = 12; // Increased from 8 to 12
     const totalCells = (canvas.width / gridSize) * (canvas.height / gridSize);
 
     for (let x = gridSize/2; x < canvas.width; x += gridSize) {
