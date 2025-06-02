@@ -16,18 +16,12 @@ for (const path in storyModules) {
   }
 }
 
-export async function getStory(slug) {
-  // For dynamic imports (if not using eager loading)
-  try {
-    const module = await import(`../content/${slug}.mdx`)
-    return {
-      component: module.default,
-      ...module.frontmatter
-    }
-  } catch (error) {
-    console.error(`Story not found: ${slug}`, error)
-    return null
+export function getStory(slug) {
+  if (stories[slug]) {
+    return stories[slug];
   }
+  console.error(`Story not found: ${slug}`);
+  return null;
 }
 
 export function getAllStories() {

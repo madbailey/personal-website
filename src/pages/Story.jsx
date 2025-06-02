@@ -1,37 +1,53 @@
-import { useParams } from 'react-router-dom';
-import { useEffect, useState, Suspense, lazy } from 'react'; // Added Suspense and lazy
+import { useParams, useLocation } from 'react-router-dom';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { getStory } from '../utils/storyLoader';
-
-
+import { ErrorBoundary } from 'react-error-boundary';
 
 const shaderComponents = {
   PineConeDelicate: lazy(() => import('../components/PineConeDelicate')),
   // Add more shaders here as needed
 };
 
-export default function Story() {
+// Debug component to track MDX rendering
+function MDXDebug({ component: Component, slug }) {
+  useEffect(() => {
+    console.log(`[MDXDebug] Mounting MDX component for slug: ${slug}`);
+    return () => console.log(`[MDXDebug] Unmounting MDX component for slug: ${slug}`);
+  }, [slug]);
+
+  return <Component />;
+}
+
+function StoryContent() {
   const { slug } = useParams();
+  const location = useLocation();
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [key, setKey] = useState(0); // Force remount on navigation
 
   useEffect(() => {
-    async function loadStory() {
-      setLoading(true);
-      try {
-        const storyData = await getStory(slug);
-        setStory(storyData);
-      } catch (error) {
-        console.error("Failed to load story:", error);
-        setStory(null); // Ensure story is null on error
-      } finally {
-        setLoading(false);
-      }
-    }
+    console.log(`[Story] Location changed:`, location);
+    console.log(`[Story] Current slug:`, slug);
+    setKey(prev => prev + 1); // Force remount on navigation
+  }, [location, slug]);
 
-    loadStory();
+  useEffect(() => {
+    console.log(`[Story] Loading story for slug:`, slug);
+    setLoading(true);
+    try {
+      const storyData = getStory(slug);
+      console.log(`[Story] Story data loaded:`, storyData);
+      setStory(storyData);
+    } catch (error) {
+      console.error("[Story] Error loading story:", error);
+      setStory(null);
+    } finally {
+      setLoading(false);
+    }
   }, [slug]);
 
   if (loading) {
+    console.log(`[Story] Rendering loading state for slug:`, slug);
     return (
       <div className="flex items-center justify-center min-h-screen bg-album-bg">
         <div className="text-center">
@@ -43,6 +59,7 @@ export default function Story() {
   }
 
   if (!story) {
+    console.log(`[Story] No story found for slug:`, slug);
     return (
       <div className="flex items-center justify-center min-h-screen bg-album-bg">
         <div className="text-center max-w-lg p-8">
@@ -60,25 +77,18 @@ export default function Story() {
     );
   }
 
+  console.log(`[Story] Rendering story for slug:`, slug);
   const StoryComponent = story.component;
-  // Get the specified shader component with better error handling
   const ShaderToRender = story.shaderComponent && shaderComponents[story.shaderComponent]
     ? shaderComponents[story.shaderComponent]
-    : null;  // Instead of defaulting to a non-existent shader, we'll handle null case
-
+    : null;
 
   return (
-    <div className="min-h-screen bg-album-bg"> {/* Ensure background color */}
-      <div className="container mx-auto px-4 py-12 md:py-16"> {/* Overall container */}
-        {/* 
-          Desktop Layout: CSS Grid for two columns.
-          - Text content in the left ~1/3 (or slightly more for readability).
-          - Shader pinned to the right ~2/3 mark.
-        */}
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-12"> {/* Using 12-column grid for flexibility */}
-          
+    <div key={key} className="min-h-screen bg-album-bg">
+      <div className="container mx-auto px-4 py-12 md:py-16">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-12">
           {/* Left Column: Story Header & MDX Content */}
-          <div className="lg:col-span-7 xl:col-span-6"> {/* Adjust col-span for desired text width */}
+          <div className="lg:col-span-7 xl:col-span-6">
             <header className="mb-10 md:mb-16">
               <h1 className="text-4xl md:text-5xl font-serif font-light text-album-dark-text mb-3 leading-tight">
                 {story.title}
@@ -95,55 +105,66 @@ export default function Story() {
               )}
             </header>
 
-            {/* MDX Content - Styled with Prose */}
             <article className="prose prose-lg prose-album max-w-none 
-                              prose-headings:font-serif prose-p:font-serif 
-                              prose-p:text-album-dark-text prose-headings:text-album-dark-text
-                              prose-a:text-album-green-dark hover:prose-a:text-album-green-light
-                              prose-blockquote:border-album-green-light prose-blockquote:text-album-medium-text
-                              dark:prose-invert dark:prose-p:text-gray-300 dark:prose-headings:text-gray-200"> 
-                              {/* Using 'prose-album' variant from tailwind.config.js */}
-              <StoryComponent />
+                            prose-headings:font-serif prose-p:font-serif 
+                            prose-p:text-album-dark-text prose-headings:text-album-dark-text
+                            prose-a:text-album-green-dark hover:prose-a:text-album-green-light
+                            prose-blockquote:border-album-green-light prose-blockquote:text-album-medium-text
+                            dark:prose-invert dark:prose-p:text-gray-300 dark:prose-headings:text-gray-200">
+              <ErrorBoundary fallback={<div>Error loading story content</div>}>
+                <Suspense fallback={<div>Loading story content...</div>}>
+                  <MDXDebug component={StoryComponent} slug={slug} />
+                </Suspense>
+              </ErrorBoundary>
             </article>
           </div>
 
           {/* Right Column: Sticky Shader Art */}
-          {/* Hidden on smaller than lg screens by default, shown as lg:block */}
           <aside className="hidden lg:block lg:col-span-5 xl:col-span-6 lg:sticky lg:top-16 xl:top-20 h-screen-minus-header max-h-[calc(100vh-8rem)]">
-            {/* The h-screen-minus-header and max-h are to prevent it from overlapping footer if you have one */}
-            {/* Adjust 'top' value to position it relative to your header height */}
             <div className="w-full h-full flex items-center justify-center p-4">
               <div className="w-full aspect-9/16 max-w-md bg-neutral-800/10 rounded-md shadow-lg overflow-hidden">
-                <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
-                  {ShaderToRender ? (
-                    <ShaderToRender />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-album-medium-text">
-                      No shader specified or shader not found
-                    </div>
-                  )}
-                </Suspense>
+                <ErrorBoundary fallback={<div>Error loading shader</div>}>
+                  <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
+                    {ShaderToRender ? (
+                      <ShaderToRender />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-album-medium-text">
+                        No shader specified or shader not found
+                      </div>
+                    )}
+                  </Suspense>
+                </ErrorBoundary>
               </div>
             </div>
           </aside>
         </div>
 
-        {/* Mobile: Shader could be here, above or below text, if not integrated differently */}
+        {/* Mobile Shader */}
         <div className="lg:hidden mt-12 mb-8 px-4">
           <div className="w-full aspect-9/16 max-w-md mx-auto bg-neutral-800/10 rounded-md shadow-lg overflow-hidden">
-            <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
-              {ShaderToRender ? (
-                <ShaderToRender />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-album-medium-text">
-                  No shader specified or shader not found
-                </div>
-              )}
-            </Suspense>
+            <ErrorBoundary fallback={<div>Error loading shader</div>}>
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
+                {ShaderToRender ? (
+                  <ShaderToRender />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-album-medium-text">
+                    No shader specified or shader not found
+                  </div>
+                )}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
-
       </div>
     </div>
+  );
+}
+
+// Main Story component with error boundary
+export default function Story() {
+  return (
+    <ErrorBoundary fallback={<div>Something went wrong loading the story</div>}>
+      <StoryContent />
+    </ErrorBoundary>
   );
 }
