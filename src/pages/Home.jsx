@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { getAllStories } from '../utils/storyLoader'
+import React, { Suspense, lazy } from 'react';
 
-import FlowingPattern from '../components/FlowingPattern'
-import AsciiGradientMatrix from '../components/asciigradientmatrix'
+// import FlowingPattern from '../components/FlowingPattern' // Not used directly, can be removed if not needed elsewhere or for other reasons
+const AsciiGradientMatrix = lazy(() => import('../components/asciigradientmatrix'));
 
 // Get all stories from MDX files
 const stories = getAllStories()
@@ -23,8 +24,10 @@ export default function Home() {
           <p> Short stories, essays, and other writings.</p>
           
           {/* Shader art as the centerpiece */}
-          <div className="mb-24">
-            <AsciiGradientMatrix />
+          <div className="mb-24" style={{ minHeight: '900px' }}> {/* Added minHeight to fallback container */}
+            <Suspense fallback={<div className="flex justify-center items-center h-full text-sm opacity-50">Loading art...</div>}>
+              <AsciiGradientMatrix />
+            </Suspense>
           </div>
           
           {/* Minimal call to action */}
