@@ -204,7 +204,7 @@ const AsciiGradientMatrix = () => {
     // Log performance periodically
     // 'time' state variable now holds the timestamp from performance.now() via animateTime
     if (time > lastLogTimeRef.current + 1000) { // Log approx every 1000ms
-      console.log(`AsciiGradientMatrix frame render time: ${duration.toFixed(2)}ms`);
+      //console.log(`AsciiGradientMatrix frame render time: ${duration.toFixed(2)}ms`);
       lastLogTimeRef.current = time;
     }
 
