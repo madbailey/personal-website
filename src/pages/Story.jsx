@@ -5,6 +5,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 const shaderComponents = {
   PineConeDelicate: lazy(() => import('../components/PineConeDelicate')),
+  AnalogCube: lazy(() => import('../components/AnalogCube')),
   // Add more shaders here as needed
 };
 
@@ -23,7 +24,21 @@ function StoryContent() {
   const location = useLocation();
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [key, setKey] = useState(0); // Force remount on navigation
+  const [key, setKey] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Add scroll handler for window
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     console.log(`[Story] Location changed:`, location);
@@ -122,13 +137,13 @@ function StoryContent() {
           {/* Right Column: Sticky Shader Art */}
           <aside className="hidden lg:block lg:col-span-5 xl:col-span-6 lg:sticky lg:top-16 xl:top-20 h-screen-minus-header max-h-[calc(100vh-8rem)]">
             <div className="w-full h-full flex items-center justify-center p-4">
-              <div className="w-full aspect-9/16 max-w-md bg-neutral-800/10 rounded-md shadow-lg overflow-hidden">
+              <div className="w-full aspect-9/16 max-w-md  overflow-hidden">
                 <ErrorBoundary fallback={<div>Error loading shader</div>}>
-                  <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
+                  <Suspense fallback={<div className="w-full h-full flex items-center shadow-lg justify-center text-album-medium-text">Loading Shader...</div>}>
                     {ShaderToRender ? (
-                      <ShaderToRender />
+                      <ShaderToRender scrollProgress={scrollProgress} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-album-medium-text">
+                      <div className="w-full h-full flex items-center shadow-lg justify-center text-album-medium-text">
                         No shader specified or shader not found
                       </div>
                     )}
@@ -141,11 +156,11 @@ function StoryContent() {
 
         {/* Mobile Shader */}
         <div className="lg:hidden mt-12 mb-8 px-4">
-          <div className="w-full aspect-9/16 max-w-md mx-auto bg-neutral-800/10 rounded-md shadow-lg overflow-hidden">
+          <div className="w-full aspect-9/16 max-w-md mx-auto  overflow-hidden">
             <ErrorBoundary fallback={<div>Error loading shader</div>}>
-              <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-album-medium-text">Loading Shader...</div>}>
+              <Suspense fallback={<div className="w-full h-full flex items-center shadow-lg justify-center text-album-medium-text">Loading Shader...</div>}>
                 {ShaderToRender ? (
-                  <ShaderToRender />
+                  <ShaderToRender scrollProgress={scrollProgress} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-album-medium-text">
                     No shader specified or shader not found

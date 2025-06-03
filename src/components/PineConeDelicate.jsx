@@ -31,10 +31,10 @@ const PineconeDelicate = () => {
     sceneRef.current = scene;
     scene.background = new THREE.Color('#F0EEE6');
 
-    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(75, .8, 0.1, 1200);
     cameraRef.current = camera;
     camera.position.z = 16;
-    camera.position.y = 0;
+    camera.position.y = 1;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
@@ -47,7 +47,7 @@ const PineconeDelicate = () => {
     lightsRef.current.push(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    directionalLight.position.set(5, 10, 7.5);
+    directionalLight.position.set(3, 9, 7.5);
     scene.add(directionalLight);
     lightsRef.current.push(directionalLight);
 
@@ -55,20 +55,20 @@ const PineconeDelicate = () => {
     pineConeRef.current = pineCone;
 
     const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(0.7, 0.7);
-    shape.lineTo(0.5, 1.4);
-    shape.lineTo(0, 1.7);
-    shape.lineTo(-0.5, 1.4);
-    shape.lineTo(-0.7, 0.7);
+    shape.moveTo(0.6, 0.3);
+    shape.lineTo(0.4, 0.3);
+    shape.lineTo(0.5, 2.7);
+    shape.lineTo(1.2, 0.2);
+    shape.lineTo(-0.2, 0.4);
+    shape.lineTo(-1.3, 0.7);
     shape.closePath();
 
     const extrudeSettings = {
       depth: 0.05,
       bevelEnabled: true,
-      bevelSegments: 4,
-      steps: 1,
-      bevelSize: 0.02,
+      bevelSegments: 10,
+      steps: 3,
+      bevelSize: 0.2,
       bevelThickness: 0.02
     };
 

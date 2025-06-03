@@ -16,6 +16,9 @@ for (const path in storyModules) {
   }
 }
 
+// Debug: Log all loaded stories
+console.log('Loaded stories:', Object.keys(stories));
+
 export function getStory(slug) {
   if (stories[slug]) {
     return stories[slug];
