@@ -25,33 +25,20 @@ useEffect(() => {
     return () => window.removeEventListener('scroll', handleScroll)
 }, [])
 
-const toggleDarkMode = () => {
-    const newMode = !darkMode
-    setDarkMode(newMode)
-    if (newMode) {
-        document.documentElement.classList.add('data-theme', 'dark')
-        localStorage.setItem('theme', 'dark')
-    } else {
-        document.documentElement.classList.remove('data-theme', 'dark')
-        localStorage.setItem('theme', 'light')
-    }
-}
 
 return (
     <div className="min-h-screen transition-colors duration-300">
       {/* Enhanced Navigation with backdrop blur and scroll effects */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      <nav className={`fixed top-0 left-0 right-0 z-50 ${
         scrolled 
-          ? 'py-4 backdrop-blur-md bg-white/80 dark:bg-black/80 border-b border-gray-200/20 dark:border-gray-800/20' 
-          : 'py-8 bg-transparent'
+          ? 'bg-white/40 dark:bg-black/40 backdrop-blur-sm border-b border-gray-200/10 dark:border-gray-800/10' 
+          : 'bg-transparent'
       }`}>
-        <div className="max-w-7xl mx-auto flex justify-between items-center px-8 lg:px-16">
+        <div className="max-w-7xl mx-auto flex justify-between items-center px-8 lg:px-16 py-4">
           {/* Logo/Home link */}
           <Link 
             to="/" 
-            className={`font-light tracking-wide hover:opacity-60 transition-all duration-500 ${
-              scrolled ? 'text-base' : 'text-lg'
-            }`}
+            className="font-light tracking-wide hover:opacity-60 transition-opacity duration-200"
             style={{color: 'hsl(var(--foreground))'}}
           >
             Madelyn
@@ -61,7 +48,7 @@ return (
           <div className="flex items-center space-x-12">
             <Link 
               to="/" 
-              className={`text-sm font-light tracking-wide hover:opacity-60 transition-all duration-500 ${
+              className={`text-sm font-light tracking-wide hover:opacity-60 transition-opacity duration-200 ${
                 location.pathname === '/' ? 'opacity-100' : 'opacity-70'
               }`}
               style={{color: 'hsl(var(--foreground))'}}
@@ -70,7 +57,7 @@ return (
             </Link>
             <Link 
               to="/about" 
-              className={`text-sm font-light tracking-wide hover:opacity-60 transition-all duration-500 ${
+              className={`text-sm font-light tracking-wide hover:opacity-60 transition-opacity duration-200 ${
                 location.pathname === '/about' ? 'opacity-100' : 'opacity-70'
               }`}
               style={{color: 'hsl(var(--foreground))'}}
@@ -90,7 +77,7 @@ return (
       <footer className="py-16 px-8 lg:px-16 mt-32">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-xs font-light tracking-wide opacity-40" style={{color: 'hsl(var(--foreground))'}}>
-            © 2024
+            © 2025
           </p>
         </div>
       </footer>
