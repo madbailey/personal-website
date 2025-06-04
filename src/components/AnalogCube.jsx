@@ -2,18 +2,40 @@ import { useRef, useEffect, useState } from 'react';
 
 export default function AnalogCube({ scrollProgress = 0 }) {
   const canvasRef = useRef();
-  const [dimensions, setDimensions] = useState({ width: 550, height: 650 });
+  const [dimensions, setDimensions] = useState({ width: 400, height: 900 });
+  const currentProgressRef = useRef(0);
+  const targetProgressRef = useRef(0);
+  const lastRenderTimeRef = useRef(0);
+
+  // Update scroll position directly without animation smoothing
+  useEffect(() => {
+    currentProgressRef.current = scrollProgress;
+  }, [scrollProgress]);
 
   // Parabolic function that peaks at 0.5 and returns to 0 at both ends
   const parabolic = (x) => 4 * x * (1 - x);
-  const p = parabolic(scrollProgress);
 
   useEffect(() => {
     const updateSize = () => {
       const container = canvasRef.current?.parentElement;
       if (container) {
-        const size = Math.min(container.clientWidth, container.clientHeight) - 40;
-        setDimensions({ width: size, height: size });
+        // Make it more rectangular and responsive
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Aspect ratio that's more portrait-like to match text flow
+        const aspectRatio = 3/4; // 3:4 ratio (portrait)
+        
+        let width, height;
+        if (containerWidth * aspectRatio < containerHeight) {
+          width = Math.min(containerWidth - 40, 600);
+          height = width / aspectRatio;
+        } else {
+          height = Math.min(containerHeight - 80, 900);
+          width = height * aspectRatio;
+        }
+        
+        setDimensions({ width: Math.floor(width), height: Math.floor(height) });
       }
     };
     updateSize();
@@ -33,6 +55,9 @@ export default function AnalogCube({ scrollProgress = 0 }) {
     const data = imageData.data;
 
     function render(time) {
+      // Get current parabolic value based on scroll position
+      const p = parabolic(currentProgressRef.current);
+      
       // Clear the buffer
       for (let i = 0; i < data.length; i += 4) {
         data[i] = 0;     // R
@@ -41,11 +66,11 @@ export default function AnalogCube({ scrollProgress = 0 }) {
         data[i + 3] = 255; // A
       }
 
-      // Calculate various effects based on parabolic scroll position
-      const baseSpeed = 0.2 + (p * 0.1); // Subtle speed change
-      const chaosFactor = p * 3; // More intense chaos in the middle
-      const colorShift = scrollProgress * 0.5; // Keep color shift linear
-      const rotationSpeed = p * 0.004; // More rotation in the middle
+      // Effects based purely on scroll position, not time
+      const baseSpeed = 0.15; // Constant base speed
+      const chaosFactor = p * 1.9; // Chaos purely based on position
+      const colorShift = currentProgressRef.current * 0.3; // Linear with position
+      const rotationOffset = currentProgressRef.current * Math.PI * 0.5; // Rotation based on position
       
       const t = time * 0.001 * baseSpeed;
       
@@ -56,33 +81,34 @@ export default function AnalogCube({ scrollProgress = 0 }) {
           
           // Translate coordinates to center
           const FC = { 
-            x: (x - w/2) / (w/2), 
-            y: (y - h/2) / (h/2)
+            x: (x - w/7) / (w/4), 
+            y: (y - h/7) / (h/4)
           };
           
-          // Add rotation based on scroll
-          const angle = t * rotationSpeed;
+          // Rotation based on scroll position, not time
+          const angle = t * 0.01 + rotationOffset;
           const rotatedX = FC.x * Math.cos(angle) - FC.y * Math.sin(angle);
           const rotatedY = FC.x * Math.sin(angle) + FC.y * Math.cos(angle);
           
-          // Base pattern with increased complexity
-          const hVal = 14.0 - rotatedY / 0.1;
+          // Base pattern
+          const hVal = 17.0 - rotatedY / 0.1;
           const c = Math.round(hVal);
           
-          // Add chaos to the pattern - more intense in the middle
-          const chaos = Math.sin(t * chaosFactor + c * c) * chaosFactor;
-          const yVal = Math.sin(rotatedX / 0.06 + t * c + c * c + chaos) * (0.4 + chaosFactor * 0.3);
+          // Chaos based on position, not changing with time
+          const chaos = Math.sin(rotatedX * 10 + currentProgressRef.current * 20) * chaosFactor;
+          const yVal = Math.sin(rotatedX / 0.06 + t * c + c * c + chaos) * (0.4 + chaosFactor * 0.2);
           
-          const intensity = 1.0 - Math.abs(yVal - hVal + c) * (1 + chaosFactor);
+          const intensity = 1.0 - Math.abs(yVal - hVal + c) * (1 + chaosFactor * 0.8);
           const clampedIntensity = Math.max(0, Math.min(1, intensity));
           
-          // Color calculation with scroll-based shift
-          const baseHue = 0.6 + colorShift; // Keep color shift linear
-          const hueValue = (baseHue + Math.sin(t * 0.1 + c) * 0.1) % 1;
+          // Color based on position
+          const baseHue = 0.6 + colorShift;
+          const hueValue = (baseHue + Math.sin(t * 0.05 + c) * 0.05) % 1;
           
           // Convert HSL to RGB
           const hue = hueValue * 6;
-          const c1 = clampedIntensity * 0.8;
+          const saturation = 0.7 - (p * 0.2);
+          const c1 = clampedIntensity * saturation;
           const x1 = c1 * (1 - Math.abs(hue % 2 - 1));
           
           let r, g, b;
@@ -93,13 +119,11 @@ export default function AnalogCube({ scrollProgress = 0 }) {
           else if (hue < 5) { r = x1; g = 0; b = c1; }
           else { r = c1; g = 0; b = x1; }
           
-          // Add some noise based on parabolic scroll position
-          const noise = (Math.random() - 0.5) * chaosFactor * 0.3;
-          
-          data[index] = Math.floor((r + noise) * 255);     // R
-          data[index + 1] = Math.floor((g + noise) * 255); // G
-          data[index + 2] = Math.floor((b + noise) * 255); // B
-          data[index + 3] = 255;                           // A
+          // No random noise - keeps it stable
+          data[index] = Math.floor(Math.max(0, Math.min(255, r * 255)));
+          data[index + 1] = Math.floor(Math.max(0, Math.min(255, g * 255)));
+          data[index + 2] = Math.floor(Math.max(0, Math.min(255, b * 255)));
+          data[index + 3] = 255;
         }
       }
       
@@ -114,15 +138,18 @@ export default function AnalogCube({ scrollProgress = 0 }) {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [dimensions, scrollProgress, p]);
+  }, [dimensions]);
+
+  const p = parabolic(currentProgressRef.current);
 
   return (
     <div style={{
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      background: 'transparent',
       minHeight: '500px',
+      dropShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+      borderRadius: '10px',      
       width: '100%'
     }}>
       <canvas
@@ -130,7 +157,7 @@ export default function AnalogCube({ scrollProgress = 0 }) {
         width={dimensions.width}
         height={dimensions.height}
         style={{
-          filter: `contrast(${1.2 + p * 0.4}) brightness(${1.1 + p * 0.3})`,
+          filter: `contrast(${1.4 + p * 0.2}) brightness(${1.0 + p * 0.15})`, // More subtle filter changes
           background: 'transparent'
         }}
       />

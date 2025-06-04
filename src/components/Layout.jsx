@@ -25,17 +25,6 @@ useEffect(() => {
     return () => window.removeEventListener('scroll', handleScroll)
 }, [])
 
-const toggleDarkMode = () => {
-    const newMode = !darkMode
-    setDarkMode(newMode)
-    if (newMode) {
-        document.documentElement.classList.add('data-theme', 'dark')
-        localStorage.setItem('theme', 'dark')
-    } else {
-        document.documentElement.classList.remove('data-theme', 'dark')
-        localStorage.setItem('theme', 'light')
-    }
-}
 
 return (
     <div className="min-h-screen transition-colors duration-300">
