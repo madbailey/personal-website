@@ -18,15 +18,11 @@ export default function About() {
   
             <div className="space-y-8 text-sm font-light leading-loose" style={{color: 'hsl(var(--foreground))'}}>
               <p className="opacity-80">
-                Hello, this is my personal space for writing and linking my work. I post everything on <a href="https://ignoranceveil.substack.com/" className="underline">Substack</a> too, but this place lets me be a bit more creative. My name is Madelyn Bailey. I live in Philadelphia. I like making gimmicky websites and writing. You will mostly find persuasive essays and short science fiction stories here.
+                Hello, this is where I put my writing. I post everything on <a href="https://ignoranceveil.substack.com/" className="underline">Substack</a> too, but this place lets me be a bit more creative. My name is Madelyn Bailey. I live in Philadelphia. I like making gimmicky websites and writing. You will mostly find persuasive essays and short science fiction stories here.
               </p>
   
               <p className="opacity-80">
                 This website was made with React, Three.js, and canvas-based generative art. When I'm not making something for the web, It will usually use Go or C#. Sometimes I'll use Python for machine learning stuff, which I'm trying to learn.
-              </p>
-
-              <p className="opacity-70">
-              Recently I've been writing about AI risk, people left behind by global capital, and how human agency can survive in a world of intelligent non-human entities.
               </p>
 
               <p className="opacity-60">

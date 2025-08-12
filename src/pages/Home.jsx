@@ -55,11 +55,11 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Mobile Stories Unified List - No above/below shader distinction */}
+          {/* Mobile Stories Unified List - Show 3 most recent */}
           <div className="md:hidden space-y-4 sm:space-y-6 mb-6 sm:mb-8">
             {stories.length > 0 && stories
               .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .slice(0, 4)
+              .slice(0, 3)
               .map((story, index) => (
                 <Link
                   key={story.slug}
@@ -98,10 +98,11 @@ export default function Home() {
 
           {/* Main content area with responsive shader */}
           <div className="relative flex flex-col md:flex-row items-center md:items-start">
-            {/* Desktop Left side stories */}
+            {/* Desktop Left side stories - Show 3 most recent, filter for left side */}
             <div className="hidden md:block w-1/3 space-y-32 pt-52 pr-8 relative">
               {stories.length > 0 && stories
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 3)
                 .filter((_, index) => index % 2 === 0)
                 .map((story, index) => (
                   <Link
@@ -151,10 +152,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Desktop Right side stories */}
+            {/* Desktop Right side stories - Show 3 most recent, filter for right side */}
             <div className="hidden md:block w-1/3 space-y-32 pt-48 pl-8 relative">
               {stories.length > 0 && stories
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 3)
                 .filter((_, index) => index % 2 === 1)
                 .map((story, index) => (
                   <Link
@@ -184,6 +186,18 @@ export default function Home() {
                   </Link>
                 ))}
             </div>
+          </div>
+
+          {/* View All Stories Link */}
+          <div className="text-center mt-16 md:mt-24">
+            <Link 
+              to="/archive"
+              className="inline-block px-6 py-3 border border-[hsla(150,60%,80%,0.2)] rounded-lg hover:bg-[hsla(150,60%,80%,0.05)] transition-all duration-300 group"
+            >
+              <span className="text-sm font-light tracking-wide opacity-70 group-hover:opacity-100" style={{color: 'hsl(var(--foreground))'}}>
+                View All Stories →
+              </span>
+            </Link>
           </div>
         </div>
       </section>

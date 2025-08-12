@@ -61,9 +61,9 @@ return (
           {/* Desktop Navigation links */}
           <div className="hidden md:flex items-center space-x-12">
             <Link 
-              to="/" 
+              to="/archive" 
               className={`text-sm font-light tracking-wide hover:opacity-60 transition-opacity duration-200 ${
-                location.pathname === '/' ? 'opacity-100' : 'opacity-70'
+                location.pathname === '/archive' ? 'opacity-100' : 'opacity-70'
               }`}
               style={{color: 'hsl(var(--foreground))'}}
             >
@@ -87,9 +87,9 @@ return (
         }`}>
           <div className="px-4 py-4 space-y-4">
             <Link 
-              to="/" 
+              to="/archive" 
               className={`block text-base font-light tracking-wide hover:opacity-60 transition-opacity duration-200 ${
-                location.pathname === '/' ? 'opacity-100' : 'opacity-70'
+                location.pathname === '/archive' ? 'opacity-100' : 'opacity-70'
               }`}
               style={{color: 'hsl(var(--foreground))'}}
               onClick={() => setMobileMenuOpen(false)}

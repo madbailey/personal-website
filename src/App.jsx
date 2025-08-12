@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import Story from './pages/Story'
 import About from './pages/About'
+import Archive from './pages/Archive'
 
 function StoryRouteWrapper() {
   const location = useLocation();
@@ -15,6 +16,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/story/:slug" element={<StoryRouteWrapper />} />
         <Route path="/about" element={<About />} />
+        <Route path="/archive" element={<Archive />} />
       </Routes>
     </Layout>
   )
