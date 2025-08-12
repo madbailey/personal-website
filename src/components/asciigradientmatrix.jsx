@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import videoFile from '../assets/media/street_walking.mp4';
 
-const AsciiGradientMatrix = ({videoSrc = videoFile}) => {
+const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const videoRef1 = useRef(null);
@@ -18,22 +18,26 @@ const AsciiGradientMatrix = ({videoSrc = videoFile}) => {
   const [crossfadeProgress, setCrossfadeProgress] = useState(0);
   const [isCrossfading, setIsCrossfading] = useState(false);
 
-  // Character grid dimensions
-  const cols = 128;
-  const rows = 192;
+  // Character grid dimensions - increased for more detail and depth
+  const cols = 120;
+  const rows = 180;
 
-  // Font properties for canvas drawing
-  const fontSize = 15; // pixels
-  const lineHeight = 2; // pixels
-  const fontFamily = 'monospace';
+  // Font properties for canvas drawing - improved typography
+  const fontSize = 14; // pixels - smaller for more density
+  const lineHeight = 2.0; // pixels - tighter for more detail
+  const fontFamily = 'JetBrains Mono, Monaco, Consolas, monospace';
 
-  // Gradient: Green (HSL or RGB) from #0f2b0f to #90ff90
-  const getGreenShade = (y, opacity = 1) => {
+  // Enhanced gradient with more dramatic depth
+  const getGreenShade = (y, opacity = 1, depth = 0) => {
     // interpolate 0 (dark) ... 1 (light)
-    const t = y / (rows - 1); // Use rows for calculation
-    // HSL: hue=120, sat=60%, light=12% to 80%
-    const light = 13 + (80 - 13) * t;
-    return `hsla(150, 60%, ${light}%, ${opacity})`;
+    const t = y / (rows - 1);
+    // Add depth layers for more visual richness
+    const baseLight = 10 + (70 - 10) * t;
+    const depthBoost = depth * 15; // depth can add brightness
+    const light = Math.min(80, baseLight + depthBoost);
+    const sat = 50 + (20) * t - depth * 5; // depth reduces saturation slightly
+    const hue = 155 + depth * 10; // slight hue shift with depth
+    return `hsla(${hue}, ${sat}%, ${light}%, ${opacity})`;
   };
 
   // Edge falloff function for softer edges
@@ -141,7 +145,7 @@ const AsciiGradientMatrix = ({videoSrc = videoFile}) => {
     };
 
     if (canvas) {
-      canvas.width = cols * (fontSize / 1.5);
+      canvas.width = cols * (fontSize / 1.2);
       canvas.height = rows * lineHeight;
       offScreenCanvas.width = cols;
       offScreenCanvas.height = rows;
@@ -240,60 +244,70 @@ const AsciiGradientMatrix = ({videoSrc = videoFile}) => {
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.textBaseline = 'top';
 
-    const chars = [' ', '·', ':', '-', '~', '*', '+', 'o', 'O', '@', '#', '█'];
+    const chars = [' ', '░', '░', '▒', '▒', '▓', '▓', '█', '▪', '▫', '■', '●'];
     const gridCenterX = cols / 2;
     const gridCenterY = rows / 2;
     const charWidth = canvas.width / cols;
     const charHeight = canvas.height / rows;
     const effectTime = time / 1000; // Convert ms timestamp to seconds for effects
 
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const videoPixelIndex = (y * offscreenCanvas.width + x) * 4;
-        const r = videoPixels[videoPixelIndex];
-        const g = videoPixels[videoPixelIndex + 1];
-        const b = videoPixels[videoPixelIndex + 2];
+    // Draw multiple depth layers for enhanced visual richness
+    for (let layer = 0; layer < 2; layer++) {
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const videoPixelIndex = (y * offscreenCanvas.width + x) * 4;
+          const r = videoPixels[videoPixelIndex];
+          const g = videoPixels[videoPixelIndex + 1];
+          const b = videoPixels[videoPixelIndex + 2];
 
-        const videoBrightness = (0.399 * r + 0.587 * g + 0.114 * b) / 255;
+          const videoBrightness = (0.399 * r + 0.587 * g + 0.114 * b) / 255;
 
-        const mouseX = (mousePos.x / 800) * cols;
-        const mouseY = (mousePos.y / 900) * rows;
+          const mouseX = (mousePos.x / 800) * cols;
+          const mouseY = (mousePos.y / 900) * rows;
 
-        // Tone down mouse-following effect
-        const autoX = mouseX + Math.sin(effectTime * 0.2) * 0.5;
-        const autoY = mouseY + Math.cos(effectTime * 0.1) * 0.5;
-        const mouseDist = Math.hypot(x - autoX, y - autoY);
-        const centerDist = Math.hypot(x - gridCenterX, y - gridCenterY);
+          // Enhanced mouse interaction with depth variations
+          const autoX = mouseX + Math.sin(effectTime * 0.2 + layer * 0.5) * (0.5 + layer * 0.3);
+          const autoY = mouseY + Math.cos(effectTime * 0.1 + layer * 0.3) * (0.5 + layer * 0.3);
+          const mouseDist = Math.hypot(x - autoX, y - autoY);
+          const centerDist = Math.hypot(x - gridCenterX, y - gridCenterY);
 
-        // Slightly reduce noise/center effect
-        const floatEffect = noise(x, y, effectTime) * 1.2;
-        
-        let baseIntensity = Math.floor(
-          3 +
-          Math.sin(centerDist * 0.02 - effectTime * 1.5 + mouseDist * 0.1) * 1.5  +
-          Math.sin(y * 0.25 + effectTime * 1.2) * 0.8  +
-          floatEffect  
-        );
+          // Enhanced float effect with depth and hover response
+          const hoverIntensity = hoveredStory ? 3.0 + layer * 0.5 : 1.5 + layer * 0.3;
+          const depthNoise = noise(x + layer * 10, y + layer * 15, effectTime + layer * 0.7);
+          const floatEffect = depthNoise * hoverIntensity;
+          
+          let baseIntensity = Math.floor(
+            3 + layer * 1.5 +
+            Math.sin(centerDist * (0.02 + layer * 0.01) - effectTime * 1.5 + mouseDist * 0.1) * (1.5 + layer * 0.5) +
+            Math.sin(y * 0.25 + effectTime * 1.2 + layer * 0.3) * (0.8 + layer * 0.2) +
+            floatEffect  
+          );
 
-        // Sharpen the video effect
-        let intensity = baseIntensity + videoBrightness * 20;
-        
-        const edgeFalloff = getEdgeFalloff(x, y);
-        intensity = intensity * edgeFalloff;
-        intensity = Math.max(0, Math.min(intensity, chars.length - 1));
+          // Enhanced video effect with depth layers
+          const videoMultiplier = hoveredStory ? 28 + layer * 3 : 22 + layer * 2;
+          let intensity = baseIntensity + videoBrightness * videoMultiplier;
+          
+          const edgeFalloff = getEdgeFalloff(x, y);
+          intensity = intensity * edgeFalloff;
+          intensity = Math.max(0, Math.min(intensity, chars.length - 1));
 
-        let opacity = edgeFalloff;
-        const randomFloat = Math.sin(x * 0.2 + y * 0.4 + effectTime * 0.8) * (0.3 * (1)) + 0.7;
-        opacity = Math.min(opacity, randomFloat);
-        opacity = Math.max(0, Math.min(opacity, 1));
+          // Enhanced opacity with depth layering
+          let opacity = edgeFalloff * (layer === 0 ? 1.0 : 0.6);
+          const hoverOpacityBoost = hoveredStory ? 0.4 + layer * 0.1 : 0.3 + layer * 0.05;
+          const randomFloat = Math.sin(x * 0.2 + y * 0.4 + effectTime * 0.8 + layer * 0.4) * hoverOpacityBoost + 0.7;
+          opacity = Math.min(opacity, randomFloat);
+          opacity = Math.max(0, Math.min(opacity, layer === 0 ? 1 : 0.8));
 
-        const charToDraw = chars[Math.floor(intensity)];
-        const charColor = getGreenShade(y, opacity);
+          if (layer === 1 && intensity < 4) continue; // Skip background layer for low intensity
 
-        ctx.fillStyle = charColor;
-        const xPos = x * charWidth;
-        const yPos = y * charHeight;
-        ctx.fillText(charToDraw, xPos, yPos);
+          const charToDraw = chars[Math.floor(intensity)];
+          const charColor = getGreenShade(y, opacity, layer * 0.3);
+
+          ctx.fillStyle = charColor;
+          const xPos = x * charWidth + (layer === 1 ? Math.sin(effectTime * 0.05 + x * 0.1) * 0.3 : 0);
+          const yPos = y * charHeight + (layer === 1 ? Math.cos(effectTime * 0.03 + y * 0.1) * 0.2 : 0);
+          ctx.fillText(charToDraw, xPos, yPos);
+        }
       }
     }
 
@@ -304,21 +318,33 @@ const AsciiGradientMatrix = ({videoSrc = videoFile}) => {
       lastLogTimeRef.current = time;
     }
 
-  }, [mousePos, time, isVideoReady, crossfadeProgress, isCrossfading, cols, rows, fontSize, lineHeight, fontFamily, getGreenShade, getEdgeFalloff, noise, lastLogTimeRef]);
+  }, [mousePos, time, isVideoReady, crossfadeProgress, isCrossfading, hoveredStory, cols, rows, fontSize, lineHeight, fontFamily, getGreenShade, getEdgeFalloff, noise, lastLogTimeRef]);
 
   return (
     <div
       ref={containerRef}
       style={{
-        width: 800,
-        height: 900,
-        background: '#fffff8',
+        width: '100%',
+        height: '100%',
+        minWidth: '700px',
+        minHeight: '700px',
+        maxHeight: '900px',
+        background: `linear-gradient(135deg, hsl(var(--background)) 0%, hsla(var(--background), 0.95) 50%, hsl(var(--background)) 100%)`,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
         userSelect: 'none',
         position: 'relative',
+        borderRadius: '12px',
+        boxShadow: hoveredStory 
+          ? 'inset 0 0 80px hsla(150, 60%, 80%, 0.25), inset 0 0 40px hsla(150, 60%, 90%, 0.1), 0 0 40px hsla(150, 60%, 80%, 0.15), 0 8px 32px rgba(0,0,0,0.1)' 
+          : 'inset 0 0 60px hsla(150, 60%, 80%, 0.15), inset 0 0 20px hsla(150, 60%, 90%, 0.05), 0 4px 20px rgba(0,0,0,0.05)',
+        transform: hoveredStory ? 'scale(1.015)' : 'scale(1)',
+        transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        border: hoveredStory 
+          ? '1px solid hsla(150, 60%, 80%, 0.2)' 
+          : '1px solid hsla(150, 60%, 80%, 0.08)',
       }}
     >
       <canvas
