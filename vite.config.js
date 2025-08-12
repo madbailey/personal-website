@@ -22,4 +22,9 @@ export default defineConfig({
     },
     react()
   ],
+  base: process.env.NODE_ENV === 'production' ? '/personal-website/' : '/',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  }
 })

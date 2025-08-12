@@ -6,6 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 const shaderComponents = {
   PineConeDelicate: lazy(() => import('../components/PineConeDelicate')),
   AnalogCube: lazy(() => import('../components/AnalogCube')),
+  EmotionalDepth: lazy(() => import('../components/EmotionalDepth')),
   // Add more shaders here as needed
 };
 
