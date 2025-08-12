@@ -22,7 +22,7 @@ export default defineConfig({
     },
     react()
   ],
-  base: process.env.NODE_ENV === 'production' ? '/personal-website/' : '/',
+  base: '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
