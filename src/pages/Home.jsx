@@ -9,9 +9,23 @@ const MobileShader = lazy(() => import('../components/MobileShader'));
 // Get all stories from MDX files
 const stories = getAllStories()
 
+// Hash function to map story slug to hue value
+const hashStringToHue = (str) => {
+  if (!str) return 155; // default sea-green
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Map to range 120-220 (green to cyan to blue to purple)
+  return 120 + Math.abs(hash) % 100;
+};
+
 export default function Home() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoveredStory, setHoveredStory] = useState(null);
+  const [accentHue, setAccentHue] = useState(155);
 
   useEffect(() => {
     const handleResize = () => {
@@ -24,10 +38,12 @@ export default function Home() {
 
   const handleStoryHover = (storySlug) => {
     setHoveredStory(storySlug);
+    setAccentHue(hashStringToHue(storySlug));
   };
 
   const handleStoryLeave = () => {
     setHoveredStory(null);
+    setAccentHue(155); // Reset to default sea-green
   };
 
   return (
@@ -86,8 +102,8 @@ export default function Home() {
                   )}
                   <article className={`relative p-4 sm:p-6 rounded-lg transition-all duration-300 ${
                     index === 0 
-                      ? 'bg-foreground/5 backdrop-blur-[2px] hover:bg-foreground/10 min-h-[120px] sm:min-h-[140px] flex flex-col justify-center p-12 sm:p-8 hover:scale-[1.025] hover:shadow-xl hover:backdrop-blur-[3px] active:scale-[0.98] cursor-pointer' 
-                      : 'hover:bg-foreground/5 group-hover:shadow-[0_0_15px_hsla(150,60%,80%,0.05)] border border-foreground/5'
+                      ? 'bg-foreground/5 backdrop-blur-[2px] hover:bg-foreground/10 min-h-[120px] sm:min-h-[140px] flex flex-col justify-center p-12 sm:p-8 hover:scale-[1.01] hover:backdrop-blur-[3px] active:scale-[0.99] cursor-pointer' 
+                      : 'hover:bg-foreground/5 border border-foreground/5'
                   }`}>
                     {index === 0 && (
                       <div className="absolute -right-1 top-1/2 w-1.5 h-1.5 rounded-full bg-[hsla(150,60%,80%,0.4)] animate-pulse z-10"></div>
@@ -124,9 +140,9 @@ export default function Home() {
                     onMouseEnter={() => handleStoryHover(story.slug)}
                     onMouseLeave={handleStoryLeave}
                   >
-                    <article className="text-right transition-all duration-500 relative p-6 rounded-lg group-hover:scale-105 group-hover:bg-foreground/3 group-hover:shadow-[0_8px_32px_hsla(150,60%,80%,0.12)] group-hover:backdrop-blur-sm transform-gpu">
+                    <article className="text-right transition-all duration-500 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
                       {index === 0 && (
-                        <div className="absolute -right-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse shadow-[0_0_8px_hsla(150,60%,80%,0.4)]"></div>
+                        <div className="absolute -right-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse"></div>
                       )}
                       <div className={`absolute right-0 top-1/2 w-0 h-px transform translate-x-full group-hover:w-16 transition-all duration-700 delay-100 ${index === 0 ? 'bg-gradient-to-l from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-l from-foreground/30 to-transparent'}`} 
                            style={{ transform: 'translateX(100%)' }}></div>
@@ -155,7 +171,7 @@ export default function Home() {
                  }}>
               <div className="w-full h-full">
                 <Suspense fallback={<div className="flex justify-center items-center h-full text-xs sm:text-sm opacity-50">Loading art...</div>}>
-                  <AsciiGradientMatrix hoveredStory={hoveredStory} />
+                  <AsciiGradientMatrix hoveredStory={hoveredStory} accentHue={accentHue} />
                 </Suspense>
               </div>
             </div>
@@ -175,9 +191,9 @@ export default function Home() {
                     onMouseEnter={() => handleStoryHover(story.slug)}
                     onMouseLeave={handleStoryLeave}
                   >
-                    <article className="text-left transition-all duration-500 relative p-6 rounded-lg group-hover:scale-105 group-hover:bg-foreground/3 group-hover:shadow-[0_8px_32px_hsla(150,60%,80%,0.12)] group-hover:backdrop-blur-sm transform-gpu">
+                    <article className="text-left transition-all duration-500 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
                       {index === 0 && (
-                        <div className="absolute -left-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse shadow-[0_0_8px_hsla(150,60%,80%,0.4)]"></div>
+                        <div className="absolute -left-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse"></div>
                       )}
                       <div className={`absolute left-0 top-1/2 w-0 h-px transform -translate-x-full group-hover:w-16 transition-all duration-700 delay-100 ${index === 0 ? 'bg-gradient-to-r from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-r from-foreground/30 to-transparent'}`}></div>
                       <h3 className={`tracking-wide mb-2 group-hover:translate-x-[4px] transition-transform duration-300 ${index === 0 ? 'text-xl font-light' : 'text-lg font-extralight'}`} 

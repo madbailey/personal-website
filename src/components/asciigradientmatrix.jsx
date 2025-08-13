@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import videoFile from '../assets/media/street_walking.mp4';
+import videoFile from '../assets/media/clouds.mp4';
 
-const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
+const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentHue = 155, hoverPoint = null}) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const videoRef1 = useRef(null);
@@ -10,65 +10,129 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
   const activeVideoRef = useRef(1); // Track which video is currently active
   const crossfadeTimeoutRef = useRef(null);
 
-  const [mousePos, setMousePos] = useState({ x: 240, y: 360 });
-  const [time, setTime] = useState(0);
+  // Convert animation state to refs to avoid React re-renders
+  const mousePosRef = useRef({ x: 240, y: 360 });
+  const timeRef = useRef(0);
   const lastLogTimeRef = useRef(0);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const isVideoReadyRef = useRef(false);
+  const crossfadeProgressRef = useRef(0);
+  const isCrossfadingRef = useRef(false);
+  const animationFrameRef = useRef(null);
+  const lastVideoTimeRef = useRef(-1);
+  const lastDrawTimeRef = useRef(0);
+  const isTabVisibleRef = useRef(true);
+  
+  // Store event handlers for proper cleanup
+  const handlersRef = useRef({
+    handleVideoReady1: null,
+    handleVideoReady2: null,
+    handleVideoError1: null,
+    handleVideoError2: null,
+    handleTimeUpdate1: null,
+    handleTimeUpdate2: null,
+    handleMouseMove: null,
+    handleVisibilityChange: null
+  });
+  
+  // Props as refs for animation loop access without re-renders
+  const hoveredStoryRef = useRef(hoveredStory);
+  const accentHueRef = useRef(accentHue);
+  const hoverPointRef = useRef(hoverPoint);
+  
+  // Keep minimal state only for React lifecycle and errors
   const [videoError, setVideoError] = useState(null);
-  const [crossfadeProgress, setCrossfadeProgress] = useState(0);
-  const [isCrossfading, setIsCrossfading] = useState(false);
 
-  // Character grid dimensions - increased for more detail and depth
-  const cols = 120;
-  const rows = 180;
-
-  // Font properties for canvas drawing - improved typography
-  const fontSize = 14; // pixels - smaller for more density
-  const lineHeight = 2.0; // pixels - tighter for more detail
+  // Dynamic grid dimensions based on container size
+  const canvasDimensionsRef = useRef({ width: 0, height: 0, cols: 0, rows: 0, cellWidth: 0, cellHeight: 0 });
+  
+  // Performance caches - initialized once
+  const cacheRef = useRef({
+    sinTable: new Float32Array(1024),
+    cosTable: new Float32Array(1024),
+    // Flowing character progression - no dots for better continuity
+    charTable: [' ', '░', '░', '▒', '▒', '▓', '▓', '■', '■', '█', '█', '▮', '▬', '▦', '▨', '█'],
+    rowColors: [],
+    lastRows: 0,
+    lastHue: -1
+  });
+  
+  // Font properties for canvas drawing
+  const fontSize = 14;
   const fontFamily = 'JetBrains Mono, Monaco, Consolas, monospace';
 
-  // Enhanced gradient with more dramatic depth
-  const getGreenShade = (y, opacity = 1, depth = 0) => {
-    // interpolate 0 (dark) ... 1 (light)
-    const t = y / (rows - 1);
-    // Add depth layers for more visual richness
-    const baseLight = 10 + (70 - 10) * t;
-    const depthBoost = depth * 15; // depth can add brightness
-    const light = Math.min(80, baseLight + depthBoost);
-    const sat = 50 + (20) * t - depth * 5; // depth reduces saturation slightly
-    const hue = 155 + depth * 10; // slight hue shift with depth
-    return `hsla(${hue}, ${sat}%, ${light}%, ${opacity})`;
-  };
-
-  // Edge falloff function for softer edges
-  const getEdgeFalloff = (x, y) => {
-    const edgeThreshold = 8; // pixels from edge where falloff starts
-    const maxFalloff = 16; // maximum falloff distance
-
-    const leftDist = x;
-    const rightDist = cols - 1 - x; // Use cols
-    const topDist = y;
-    const bottomDist = rows - 1 - y; // Use rows
-
-    const minDist = Math.min(leftDist, rightDist, topDist, bottomDist);
-    
-    if (minDist >= maxFalloff) return 1;
-    if (minDist <= 0) return 0;
-
-    // Smooth falloff curve
-    return Math.pow(minDist / maxFalloff, 1.5);
-  };
-
-  // Simple noise function for floating effect
-  const noise = (x, y, t) => {
-    return Math.sin(x * 0.1 + t * 0.3) * Math.cos(y * 0.15 + t * 0.2) * 0.5;
-  };
-
-  // Add debug logging
+  // Initialize sin/cos lookup tables
   useEffect(() => {
-    console.log("AsciiGradientMatrix mounted with video source:", videoSrc);
-    return () => console.log("AsciiGradientMatrix unmounted");
-  }, [videoSrc]);
+    const cache = cacheRef.current;
+    for (let i = 0; i < 1024; i++) {
+      const angle = (i / 1024) * Math.PI * 2;
+      cache.sinTable[i] = Math.sin(angle);
+      cache.cosTable[i] = Math.cos(angle);
+    }
+  }, []);
+
+  // Fast trig lookups
+  const fastSin = (x) => {
+    const index = Math.floor(((x % (Math.PI * 2)) / (Math.PI * 2)) * 1024) & 1023;
+    return cacheRef.current.sinTable[index];
+  };
+  
+  const fastCos = (x) => {
+    const index = Math.floor(((x % (Math.PI * 2)) / (Math.PI * 2)) * 1024) & 1023;
+    return cacheRef.current.cosTable[index];
+  };
+
+  // Clean animation without liquid effects - just subtle video-driven variation
+  const getVideoNoise = (x, y, t) => {
+    return fastSin(x * 0.02 + t * 0.1) * 0.1; // Very subtle variation
+  };
+
+  // Precompute row colors when dimensions or hue changes
+  const updateRowColors = (rows, hue) => {
+    const cache = cacheRef.current;
+    if (cache.lastRows === rows && cache.lastHue === hue) return;
+    
+    cache.rowColors = [];
+    cache.lastRows = rows;
+    cache.lastHue = hue;
+    
+    for (let y = 0; y < rows; y++) {
+      const t = y / (rows - 1);
+      const baseLight = 10 + (75 - 10) * t;
+      const sat = 45 + (30) * t;
+      
+      // Pre-compute color variations with desaturated background
+      cache.rowColors[y] = {
+        base: `hsla(${hue}, ${sat}%, ${baseLight}%, 1)`,
+        depth1: `hsla(${hue + 8}, ${sat - 3}%, ${Math.min(85, baseLight + 12)}%, 0.7)`,
+        depth2: `hsla(${hue + 16}, ${sat - 6}%, ${Math.min(90, baseLight + 25)}%, 0.8)`,
+        bright: `hsla(${hue + 5}, ${Math.min(100, sat + 10)}%, ${Math.min(95, baseLight + 35)}%, 0.9)`,
+        dim: `hsla(${hue - 5}, ${Math.max(20, sat - 10)}%, ${Math.max(5, baseLight - 15)}%, 0.5)`,
+        // Very desaturated colors for background/light areas
+        background: `hsla(${hue}, ${Math.max(5, sat - 35)}%, ${baseLight}%, 0.3)`,
+        lightBg: `hsla(${hue}, ${Math.max(8, sat - 25)}%, ${baseLight + 5}%, 0.4)`
+      };
+    }
+  };
+
+  // Clean character lookup from intensity
+  const getCharFromIntensity = (intensity) => {
+    const charTable = cacheRef.current.charTable;
+    const maxIndex = charTable.length - 1;
+    return charTable[Math.floor(Math.max(0, Math.min(intensity, maxIndex)))];
+  };
+
+  // Update refs when props change (no re-render of animation)
+  useEffect(() => {
+    hoveredStoryRef.current = hoveredStory;
+  }, [hoveredStory]);
+  
+  useEffect(() => {
+    accentHueRef.current = accentHue;
+  }, [accentHue]);
+  
+  useEffect(() => {
+    hoverPointRef.current = hoverPoint;
+  }, [hoverPoint]);
 
   // Effect for setting up canvas size and mouse/animation listeners
   useEffect(() => {
@@ -78,134 +142,326 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
     const offScreenCanvas = document.createElement('canvas');
     offscreenCanvasRef.current = offScreenCanvas;
 
-    const handleVideoReady = (video) => {
-      console.log("Video ready state:", video.readyState, "Video source:", video.src);
-      if (video === video1) {
-        setIsVideoReady(true);
-        video.play().catch(e => {
-          console.error("Video play failed:", e);
+    // Create bound handlers once and store them
+    const createHandlers = () => {
+      const handleVideoReady1 = () => {
+        console.log("Video 1 ready state:", video1.readyState);
+        isVideoReadyRef.current = true;
+        video1.play().catch(e => {
+          console.error("Video 1 play failed:", e);
           setVideoError(e);
         });
-      }
+      };
+      
+      const handleVideoReady2 = () => {
+        console.log("Video 2 ready state:", video2.readyState);
+      };
+      
+      const handleVideoError1 = (e) => {
+        console.error("Video 1 error:", e);
+        setVideoError(e);
+      };
+      
+      const handleVideoError2 = (e) => {
+        console.error("Video 2 error:", e);
+        setVideoError(e);
+      };
+      
+      const handleTimeUpdate1 = () => {
+        if (video1.currentTime >= video1.duration - 0.5) {
+          if (!isCrossfadingRef.current) {
+            isCrossfadingRef.current = true;
+            video2.currentTime = 0;
+            video2.play().catch(console.error);
+            
+            const startTime = performance.now();
+            const crossfadeDuration = 500;
+            
+            const animateCrossfade = () => {
+              const elapsed = performance.now() - startTime;
+              const progress = Math.min(elapsed / crossfadeDuration, 1);
+              crossfadeProgressRef.current = progress;
+              
+              if (progress < 1) {
+                crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
+              } else {
+                isCrossfadingRef.current = false;
+                crossfadeProgressRef.current = 0;
+                activeVideoRef.current = 2;
+                video1.pause();
+                video1.currentTime = 0;
+              }
+            };
+            
+            crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
+          }
+        }
+      };
+      
+      const handleTimeUpdate2 = () => {
+        if (video2.currentTime >= video2.duration - 0.5) {
+          if (!isCrossfadingRef.current) {
+            isCrossfadingRef.current = true;
+            video1.currentTime = 0;
+            video1.play().catch(console.error);
+            
+            const startTime = performance.now();
+            const crossfadeDuration = 500;
+            
+            const animateCrossfade = () => {
+              const elapsed = performance.now() - startTime;
+              const progress = Math.min(elapsed / crossfadeDuration, 1);
+              crossfadeProgressRef.current = progress;
+              
+              if (progress < 1) {
+                crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
+              } else {
+                isCrossfadingRef.current = false;
+                crossfadeProgressRef.current = 0;
+                activeVideoRef.current = 1;
+                video2.pause();
+                video2.currentTime = 0;
+              }
+            };
+            
+            crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
+          }
+        }
+      };
+      
+      const handleMouseMove = (e) => {
+        if (containerRef.current && canvasDimensionsRef.current.cols > 0) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const relativeX = e.clientX - rect.left;
+          const relativeY = e.clientY - rect.top;
+          
+          const { cellWidth, cellHeight } = canvasDimensionsRef.current;
+          mousePosRef.current = {
+            gridX: relativeX / cellWidth,
+            gridY: relativeY / cellHeight,
+            x: relativeX,
+            y: relativeY
+          };
+        }
+      };
+      
+      const handleVisibilityChange = () => {
+        isTabVisibleRef.current = !document.hidden;
+      };
+      
+      // Store handlers
+      handlersRef.current = {
+        handleVideoReady1,
+        handleVideoReady2,
+        handleVideoError1,
+        handleVideoError2,
+        handleTimeUpdate1,
+        handleTimeUpdate2,
+        handleMouseMove,
+        handleVisibilityChange
+      };
     };
-
-    const handleVideoError = (e, video) => {
-      console.error("Video error:", e);
-      console.error("Video source attempted:", video.src);
-      console.error("Video error code:", video.error?.code);
-      console.error("Video error message:", video.error?.message);
-      setVideoError(e);
-    };
+    
+    createHandlers();
 
     const setupVideo = (video, isPrimary) => {
       if (video) {
         video.src = videoSrc;
-        video.addEventListener('error', (e) => handleVideoError(e, video));
+        const handlers = handlersRef.current;
         
-        if (video.readyState >= video.HAVE_METADATA) {
-          handleVideoReady(video);
-        } else {
-          video.addEventListener('loadedmetadata', () => handleVideoReady(video));
-        }
-
-        // Set up loop handling
-        video.addEventListener('timeupdate', () => {
-          if (video.currentTime >= video.duration - 0.5) { // Start crossfade 0.5s before end
-            if (!isCrossfading) {
-              setIsCrossfading(true);
-              const nextVideo = isPrimary ? video2 : video1;
-              nextVideo.currentTime = 0;
-              nextVideo.play().catch(console.error);
-              
-              // Start crossfade animation
-              const startTime = performance.now();
-              const crossfadeDuration = 500; // 500ms crossfade
-              
-              const animateCrossfade = () => {
-                const elapsed = performance.now() - startTime;
-                const progress = Math.min(elapsed / crossfadeDuration, 1);
-                setCrossfadeProgress(progress);
-                
-                if (progress < 1) {
-                  crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
-                } else {
-                  setIsCrossfading(false);
-                  setCrossfadeProgress(0);
-                  activeVideoRef.current = isPrimary ? 2 : 1;
-                  video.pause();
-                  video.currentTime = 0;
-                }
-              };
-              
-              crossfadeTimeoutRef.current = requestAnimationFrame(animateCrossfade);
-            }
+        if (isPrimary) {
+          video.addEventListener('error', handlers.handleVideoError1);
+          video.addEventListener('timeupdate', handlers.handleTimeUpdate1);
+          
+          if (video.readyState >= video.HAVE_METADATA) {
+            handlers.handleVideoReady1();
+          } else {
+            video.addEventListener('loadedmetadata', handlers.handleVideoReady1);
           }
-        });
+        } else {
+          video.addEventListener('error', handlers.handleVideoError2);
+          video.addEventListener('timeupdate', handlers.handleTimeUpdate2);
+          
+          if (video.readyState >= video.HAVE_METADATA) {
+            handlers.handleVideoReady2();
+          } else {
+            video.addEventListener('loadedmetadata', handlers.handleVideoReady2);
+          }
+        }
       }
     };
 
-    if (canvas) {
-      canvas.width = cols * (fontSize / 1.2);
-      canvas.height = rows * lineHeight;
-      offScreenCanvas.width = cols;
-      offScreenCanvas.height = rows;
+    // Function to setup canvas dimensions
+    const setupCanvasDimensions = () => {
+      if (canvas && containerRef.current) {
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Get container dimensions
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        
+        // Skip if container has no dimensions yet
+        if (containerWidth === 0 || containerHeight === 0) {
+          console.log('Container dimensions not ready, skipping setup');
+          return false;
+        }
+        
+        // Calculate grid dimensions based on container size
+        const cellWidth = fontSize * 0.6; // Approximate character width
+        const cellHeight = fontSize * 1.05;
+        const cols = Math.max(1, Math.floor(containerWidth / cellWidth));
+        const rows = Math.max(1, Math.floor(containerHeight / cellHeight));
+        
+        // Store dimensions in ref for animation loop
+        canvasDimensionsRef.current = {
+          width: containerWidth,
+          height: containerHeight,
+          cols,
+          rows,
+          cellWidth,
+          cellHeight
+        };
+        
+        // Set canvas buffer size to container dimensions (scaled for device pixel ratio)
+        canvas.width = containerWidth * dpr;
+        canvas.height = containerHeight * dpr;
+        
+        // Scale the context to match device pixel ratio
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        
+        // Set video sampling grid size
+        offScreenCanvas.width = cols;
+        offScreenCanvas.height = rows;
+        
+        console.log('Canvas dimensions set:', { containerWidth, containerHeight, cols, rows });
+        return true;
+      }
+      return false;
+    };
 
+    // Initial setup - may fail if container not ready
+    const initialSetup = setupCanvasDimensions();
+    // Only setup videos if canvas dimensions are ready
+    if (initialSetup || canvasDimensionsRef.current.cols > 0) {
       setupVideo(video1, true);
       setupVideo(video2, false);
     }
 
-    const handleMouseMove = (e) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setMousePos({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        });
-      }
-    };
+    // Mouse handler now created in createHandlers()
 
-    let animationFrameId = null;
+    // Add resize observer to handle container size changes
+    let resizeObserver = null;
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        setupCanvasDimensions();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // If initial setup failed, try again after a short delay
+    if (!initialSetup) {
+      const retrySetup = () => {
+        if (setupCanvasDimensions()) {
+          console.log('Canvas setup successful on retry');
+        } else {
+          setTimeout(retrySetup, 100); // Try again in 100ms
+        }
+      };
+      setTimeout(retrySetup, 50);
+    }
+
+    // Animation loop that directly draws to canvas without React state
     let lastFrameTime = 0;
-    const targetFPS = 24; // Reduced target FPS slightly for performance with video
+    const targetFPS = 30; // Slightly higher FPS since we're not re-rendering React
     const frameInterval = 1000 / targetFPS;
 
-    const animateTime = (rafTime) => {
-      animationFrameId = requestAnimationFrame(animateTime);
-      const currentTimestamp = performance.now();
-      const deltaTime = currentTimestamp - lastFrameTime;
-
-      if (deltaTime >= frameInterval) {
-        const remainder = deltaTime % frameInterval;
-        lastFrameTime = currentTimestamp - remainder;
-        setTime(currentTimestamp);
+    const drawFrame = (currentTime) => {
+      animationFrameRef.current = requestAnimationFrame(drawFrame);
+      
+      // Short-circuit if tab is hidden
+      if (!isTabVisibleRef.current) {
+        return;
       }
+      
+      // Always update time for frame change detection
+      timeRef.current = currentTime;
+      
+      // drawCanvas() now handles its own frame limiting
+      drawCanvas();
     };
 
-    animationFrameId = requestAnimationFrame(animateTime);
-    window.addEventListener('mousemove', handleMouseMove);
+    animationFrameRef.current = requestAnimationFrame(drawFrame);
+    window.addEventListener('mousemove', handlersRef.current.handleMouseMove);
+    document.addEventListener('visibilitychange', handlersRef.current.handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      const handlers = handlersRef.current;
+      
+      if (handlers.handleMouseMove) {
+        window.removeEventListener('mousemove', handlers.handleMouseMove);
+      }
+      
+      if (handlers.handleVisibilityChange) {
+        document.removeEventListener('visibilitychange', handlers.handleVisibilityChange);
+      }
+      
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      
       if (crossfadeTimeoutRef.current) {
         cancelAnimationFrame(crossfadeTimeoutRef.current);
       }
+      
       if (video1) {
-        video1.removeEventListener('loadedmetadata', () => handleVideoReady(video1));
-        video1.removeEventListener('error', (e) => handleVideoError(e, video1));
+        if (handlers.handleVideoReady1) {
+          video1.removeEventListener('loadedmetadata', handlers.handleVideoReady1);
+        }
+        if (handlers.handleVideoError1) {
+          video1.removeEventListener('error', handlers.handleVideoError1);
+        }
+        if (handlers.handleTimeUpdate1) {
+          video1.removeEventListener('timeupdate', handlers.handleTimeUpdate1);
+        }
         video1.src = '';
       }
+      
       if (video2) {
-        video2.removeEventListener('loadedmetadata', () => handleVideoReady(video2));
-        video2.removeEventListener('error', (e) => handleVideoError(e, video2));
+        if (handlers.handleVideoReady2) {
+          video2.removeEventListener('loadedmetadata', handlers.handleVideoReady2);
+        }
+        if (handlers.handleVideoError2) {
+          video2.removeEventListener('error', handlers.handleVideoError2);
+        }
+        if (handlers.handleTimeUpdate2) {
+          video2.removeEventListener('timeupdate', handlers.handleTimeUpdate2);
+        }
         video2.src = '';
       }
+      
+      // Clear handler references
+      handlersRef.current = {
+        handleVideoReady1: null,
+        handleVideoReady2: null,
+        handleVideoError1: null,
+        handleVideoError2: null,
+        handleTimeUpdate1: null,
+        handleTimeUpdate2: null,
+        handleMouseMove: null,
+        handleVisibilityChange: null
+      };
     };
-  }, [cols, rows, fontSize, lineHeight, videoSrc]);
+  }, [fontSize, videoSrc]);
 
-  // Effect for drawing on the canvas
-  useEffect(() => {
-    if (!isVideoReady) return;
+  // Canvas drawing function - now separated from React render cycle
+  const drawCanvas = () => {
+    if (!isVideoReadyRef.current) return;
 
     const canvas = canvasRef.current;
     const video1 = videoRef1.current;
@@ -218,16 +474,35 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
     const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
     if (!ctx || !offscreenCtx) return;
 
-    const startTime = performance.now();
+    // Check if offscreen canvas has valid dimensions
+    if (offscreenCanvas.width === 0 || offscreenCanvas.height === 0) {
+      return;
+    }
+
+    // Get current video time and check if frame changed
+    const activeVideo = activeVideoRef.current === 1 ? video1 : video2;
+    const currentVideoTime = activeVideo.currentTime;
+    const currentTime = performance.now();
+    
+    // Only redraw if video frame changed or significant time passed (for subtle animation)
+    const videoFrameChanged = Math.abs(currentVideoTime - lastVideoTimeRef.current) > 0.001;
+    const timeForSubtleUpdate = currentTime - lastDrawTimeRef.current > 100; // 10fps for subtle effects
+    
+    if (!videoFrameChanged && !timeForSubtleUpdate) {
+      return; // Skip expensive operations
+    }
+    
+    lastVideoTimeRef.current = currentVideoTime;
+    lastDrawTimeRef.current = currentTime;
 
     // Clear the offscreen canvas
     offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
     // Draw both videos with crossfade
-    if (isCrossfading) {
-      offscreenCtx.globalAlpha = 1 - crossfadeProgress;
+    if (isCrossfadingRef.current) {
+      offscreenCtx.globalAlpha = 1 - crossfadeProgressRef.current;
       offscreenCtx.drawImage(activeVideoRef.current === 1 ? video1 : video2, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
-      offscreenCtx.globalAlpha = crossfadeProgress;
+      offscreenCtx.globalAlpha = crossfadeProgressRef.current;
       offscreenCtx.drawImage(activeVideoRef.current === 1 ? video2 : video1, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
       offscreenCtx.globalAlpha = 1;
     } else {
@@ -241,84 +516,120 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const { cols, rows, cellWidth, cellHeight } = canvasDimensionsRef.current;
+    
+    // Early return if dimensions not calculated yet
+    if (cols === 0 || rows === 0) return;
+    
+    // Update color cache if needed
+    updateRowColors(rows, accentHueRef.current);
+    
+    // Render the ASCII grid
+    renderAscii(ctx, videoPixels, offscreenCanvas, cols, rows, cellWidth, cellHeight);
+
+  };
+
+  // High-performance ASCII rendering function with aggressive caching
+  const renderAscii = (ctx, videoPixels, offscreenCanvas, cols, rows, cellWidth, cellHeight) => {
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.textBaseline = 'top';
-
-    const chars = [' ', '░', '░', '▒', '▒', '▓', '▓', '█', '▪', '▫', '■', '●'];
+    
+    const effectTime = timeRef.current / 1000;
+    const isHovered = hoveredStoryRef.current;
+    const mousePos = mousePosRef.current;
+    
     const gridCenterX = cols / 2;
     const gridCenterY = rows / 2;
-    const charWidth = canvas.width / cols;
-    const charHeight = canvas.height / rows;
-    const effectTime = time / 1000; // Convert ms timestamp to seconds for effects
-
-    // Draw multiple depth layers for enhanced visual richness
+    const mouseX = mousePos.gridX || gridCenterX;
+    const mouseY = mousePos.gridY || gridCenterY;
+    
+    // Pre-calculate constants for this frame - clean, no liquid effects
+    const videoMultiplier = 24;
+    const baseIntensity = 4.0;
+    
+    // Render two layers
     for (let layer = 0; layer < 2; layer++) {
+      const layerAlpha = layer === 0 ? 1.0 : 0.6;
+      const layerBoost = layer * 0.8;
+      
       for (let y = 0; y < rows; y++) {
+        const rowColors = cacheRef.current.rowColors[y];
+        if (!rowColors) continue;
+        
+        // Clean row processing without wave effects
+        
         for (let x = 0; x < cols; x++) {
-          const videoPixelIndex = (y * offscreenCanvas.width + x) * 4;
-          const r = videoPixels[videoPixelIndex];
-          const g = videoPixels[videoPixelIndex + 1];
-          const b = videoPixels[videoPixelIndex + 2];
-
-          const videoBrightness = (0.399 * r + 0.587 * g + 0.114 * b) / 255;
-
-          const mouseX = (mousePos.x / 800) * cols;
-          const mouseY = (mousePos.y / 900) * rows;
-
-          // Enhanced mouse interaction with depth variations
-          const autoX = mouseX + Math.sin(effectTime * 0.2 + layer * 0.5) * (0.5 + layer * 0.3);
-          const autoY = mouseY + Math.cos(effectTime * 0.1 + layer * 0.3) * (0.5 + layer * 0.3);
-          const mouseDist = Math.hypot(x - autoX, y - autoY);
-          const centerDist = Math.hypot(x - gridCenterX, y - gridCenterY);
-
-          // Enhanced float effect with depth and hover response
-          const hoverIntensity = hoveredStory ? 3.0 + layer * 0.5 : 1.5 + layer * 0.3;
-          const depthNoise = noise(x + layer * 10, y + layer * 15, effectTime + layer * 0.7);
-          const floatEffect = depthNoise * hoverIntensity;
+          // Get video brightness
+          const videoIndex = (y * offscreenCanvas.width + x) * 4;
+          const videoBrightness = (0.299 * videoPixels[videoIndex] + 
+                                  0.587 * videoPixels[videoIndex + 1] + 
+                                  0.114 * videoPixels[videoIndex + 2]) / 255;
           
-          let baseIntensity = Math.floor(
-            3 + layer * 1.5 +
-            Math.sin(centerDist * (0.02 + layer * 0.01) - effectTime * 1.5 + mouseDist * 0.1) * (1.5 + layer * 0.5) +
-            Math.sin(y * 0.25 + effectTime * 1.2 + layer * 0.3) * (0.8 + layer * 0.2) +
-            floatEffect  
-          );
-
-          // Enhanced video effect with depth layers
-          const videoMultiplier = hoveredStory ? 28 + layer * 3 : 22 + layer * 2;
-          let intensity = baseIntensity + videoBrightness * videoMultiplier;
+          // Clean distance-based effects
+          const centerDist = Math.sqrt((x - gridCenterX) ** 2 + (y - gridCenterY) ** 2);
+          const mouseDist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
           
-          const edgeFalloff = getEdgeFalloff(x, y);
-          intensity = intensity * edgeFalloff;
-          intensity = Math.max(0, Math.min(intensity, chars.length - 1));
-
-          // Enhanced opacity with depth layering
-          let opacity = edgeFalloff * (layer === 0 ? 1.0 : 0.6);
-          const hoverOpacityBoost = hoveredStory ? 0.4 + layer * 0.1 : 0.3 + layer * 0.05;
-          const randomFloat = Math.sin(x * 0.2 + y * 0.4 + effectTime * 0.8 + layer * 0.4) * hoverOpacityBoost + 0.7;
-          opacity = Math.min(opacity, randomFloat);
-          opacity = Math.max(0, Math.min(opacity, layer === 0 ? 1 : 0.8));
-
-          if (layer === 1 && intensity < 4) continue; // Skip background layer for low intensity
-
-          const charToDraw = chars[Math.floor(intensity)];
-          const charColor = getGreenShade(y, opacity, layer * 0.3);
-
-          ctx.fillStyle = charColor;
-          const xPos = x * charWidth + (layer === 1 ? Math.sin(effectTime * 0.05 + x * 0.1) * 0.3 : 0);
-          const yPos = y * charHeight + (layer === 1 ? Math.cos(effectTime * 0.03 + y * 0.1) * 0.2 : 0);
-          ctx.fillText(charToDraw, xPos, yPos);
+          // Simple, clean animation - no liquid effects
+          const subtleVariation = getVideoNoise(x, y, effectTime);
+          const mouseInfluence = Math.exp(-mouseDist * 0.1) * 0.5;
+          
+          let intensity = baseIntensity + layerBoost + videoBrightness * videoMultiplier + 
+                         subtleVariation + mouseInfluence;
+          
+          // Edge falloff (simplified)
+          const edgeDistance = Math.min(x, cols - x, y, rows - y);
+          const edgeFalloff = edgeDistance < 16 ? Math.pow(edgeDistance / 16, 1.5) : 1;
+          intensity *= edgeFalloff;
+          
+          // Skip low intensity background layer
+          if (layer === 1 && intensity < 4) continue;
+          
+          // Get character - no variation, clean ASCII
+          const char = getCharFromIntensity(intensity);
+          
+          // More nuanced color selection with desaturated backgrounds
+          let color;
+          if (layer === 0) {
+            if (intensity > 12) {
+              color = rowColors.bright;
+            } else if (intensity < 2) {
+              // Very light areas get desaturated background colors
+              color = rowColors.background;
+            } else if (intensity < 4) {
+              // Light areas get slightly desaturated colors
+              color = rowColors.lightBg;
+            } else {
+              color = rowColors.base;
+            }
+          } else {
+            // Background layer uses more muted colors
+            if (intensity < 5) {
+              color = rowColors.background;
+            } else {
+              color = intensity > 7 ? rowColors.depth2 : rowColors.depth1;
+            }
+          }
+          
+          // Clean positioning - no liquid offsets
+          const xPos = x * cellWidth;
+          const yPos = y * cellHeight;
+          
+          ctx.fillStyle = color;
+          ctx.fillText(char, xPos, yPos);
+          
+          // Subtle glow for very bright characters
+          if (intensity > 13 && layer === 0) {
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = rowColors.bright;
+            ctx.fillText(char, xPos, yPos);
+            ctx.globalAlpha = 1;
+          }
         }
       }
     }
+  };
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
-    if (time > lastLogTimeRef.current + 1500) {
-      lastLogTimeRef.current = time;
-    }
-
-  }, [mousePos, time, isVideoReady, crossfadeProgress, isCrossfading, hoveredStory, cols, rows, fontSize, lineHeight, fontFamily, getGreenShade, getEdgeFalloff, noise, lastLogTimeRef]);
+  // Removed - drawing now handled by animation loop with renderAscii function
 
   return (
     <div
@@ -337,21 +648,14 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null}) => {
         userSelect: 'none',
         position: 'relative',
         borderRadius: '12px',
-        boxShadow: hoveredStory 
-          ? 'inset 0 0 80px hsla(150, 60%, 80%, 0.25), inset 0 0 40px hsla(150, 60%, 90%, 0.1), 0 0 40px hsla(150, 60%, 80%, 0.15), 0 8px 32px rgba(0,0,0,0.1)' 
-          : 'inset 0 0 60px hsla(150, 60%, 80%, 0.15), inset 0 0 20px hsla(150, 60%, 90%, 0.05), 0 4px 20px rgba(0,0,0,0.05)',
-        transform: hoveredStory ? 'scale(1.015)' : 'scale(1)',
-        transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-        border: hoveredStory 
-          ? '1px solid hsla(150, 60%, 80%, 0.2)' 
-          : '1px solid hsla(150, 60%, 80%, 0.08)',
+        boxShadow: 'none',
+        border: '1px solid hsla(150, 60%, 80%, 0.08)',
       }}
     >
       <canvas
         ref={canvasRef}
         style={{
-          width: '100%',
-          height: '100%',
+          display: 'block',
         }}
       />
       <video
