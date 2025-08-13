@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-const PineconeDelicate = () => {
+const PineConeDelicate = () => {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -276,4 +276,4 @@ const PineconeDelicate = () => {
   );
 };
 
-export default PineconeDelicate;
+export default PineConeDelicate;

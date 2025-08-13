@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,36 +51,15 @@
     --ring: 48 100% 95%;              /* Light focus ring */
   }
 
-  /* Font faces for artistic typography */
-  @font-face {
-    font-family: et-book;
-    src: url('/media/et-book-roman-line-figures.woff') format("woff");
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: et-book;
-    src: url('/media/et-book-italic.woff2') format("woff2");
-    font-weight: 400;
-    font-style: italic;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: et-book;
-    src: url('/media/et-book-bold-line-figures.woff') format("woff");
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-  }
+  /* Modern font stack using Google Fonts */
 
   /* Global body styling for minimal aesthetic */
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    @apply font-serif leading-loose;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 200;
+    line-height: 1.6;
     @apply transition-colors duration-500;
     font-feature-settings: "liga", "kern";
     text-rendering: optimizeLegibility;
@@ -89,27 +70,29 @@
   /* Enhanced typography for story content */
   .story-content {
     @apply max-w-2xl mx-auto px-8 py-16;
-    @apply text-base leading-loose;
-    @apply font-serif;
+    @apply text-base leading-relaxed;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
 
   .story-content h1 {
-    @apply text-2xl md:text-3xl font-light mb-16 text-center;
-    @apply tracking-wide leading-tight;
+    @apply text-3xl md:text-4xl font-light mb-12 text-center;
+    @apply tracking-tight leading-tight;
+    font-family: 'Playfair Display', Georgia, serif;
     color: hsl(var(--foreground));
   }
 
   .story-content h2 {
-    @apply text-xl font-light mt-20 mb-8;
-    @apply tracking-wide;
+    @apply text-2xl font-light mt-16 mb-6;
+    @apply tracking-tight;
+    font-family: 'Playfair Display', Georgia, serif;
     color: hsl(var(--foreground));
   }
 
   .story-content p {
-    @apply mb-8 text-justify;
-    @apply leading-loose;
+    @apply mb-6 text-left;
+    @apply leading-relaxed;
     color: hsl(var(--foreground));
     hyphens: auto;
   }
@@ -118,7 +101,7 @@
   .story-content p:first-of-type::first-letter {
     @apply text-4xl font-light float-left mr-2 leading-none;
     color: hsl(var(--accent));
-    font-family: 'et-book', serif;
+    font-family: 'Playfair Display', Georgia, serif;
   }
 
   /* Selection styling */
@@ -140,9 +123,17 @@
   /* Minimal button styles when needed */
   .btn-minimal {
     @apply text-sm font-light tracking-wide;
-    @apply hover:opacity-60 transition-all duration-500;
-    @apply focus:outline-none focus:opacity-60;
+    @apply hover:opacity-70 transition-all duration-300;
+    @apply focus:outline-none focus:opacity-70;
     color: hsl(var(--foreground));
+  }
+
+  /* Enhanced title styling */
+  .site-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
 
   /* Shader/art container with minimal styling */

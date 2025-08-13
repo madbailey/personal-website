@@ -40,3 +40,12 @@
 .read-the-docs {
   color: #888;
 }
+
+@keyframes titleSheen {
+  0% {
+    backgroundPosition: -100% 0;
+  }
+  100% {
+    backgroundPosition: 200% 0;
+  }
+}
