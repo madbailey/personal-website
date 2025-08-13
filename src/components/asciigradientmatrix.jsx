@@ -1,7 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import videoFile from '../assets/media/clouds.mp4';
+// Import all available videos
+import aquariumVideo from '../assets/media/aquarium.mp4';
+import cloudsVideo from '../assets/media/clouds.mp4';
+import streetWalkingVideo from '../assets/media/street_walking.mp4';
+import womanLaughingVideo from '../assets/media/womanlaughing.mp4';
 
-const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentHue = 155, hoverPoint = null}) => {
+const AsciiGradientMatrix = ({hoveredStory = null, accentHue = 155, hoverPoint = null}) => {
+  // Array of available videos
+  const availableVideos = [
+    aquariumVideo,
+    cloudsVideo,
+    streetWalkingVideo,
+    womanLaughingVideo
+  ];
+  
+  // Randomly select a video on component mount
+  const [selectedVideo] = useState(() => {
+    const randomIndex = Math.floor(Math.random() * availableVideos.length);
+    return availableVideos[randomIndex];
+  });
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const videoRef1 = useRef(null);
@@ -266,7 +283,7 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentH
 
     const setupVideo = (video, isPrimary) => {
       if (video) {
-        video.src = videoSrc;
+        video.src = selectedVideo;
         const handlers = handlersRef.current;
         
         if (isPrimary) {
@@ -308,8 +325,8 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentH
         }
         
         // Calculate grid dimensions based on container size
-        const cellWidth = fontSize * 0.6; // Approximate character width
-        const cellHeight = fontSize * 1.05;
+        const cellWidth = fontSize * 0.5; // Smaller character width for higher resolution
+        const cellHeight = fontSize * 0.9; // Smaller character height for higher resolution
         const cols = Math.max(1, Math.floor(containerWidth / cellWidth));
         const rows = Math.max(1, Math.floor(containerHeight / cellHeight));
         
@@ -457,7 +474,7 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentH
         handleVisibilityChange: null
       };
     };
-  }, [fontSize, videoSrc]);
+  }, [fontSize, selectedVideo]);
 
   // Canvas drawing function - now separated from React render cycle
   const drawCanvas = () => {
@@ -699,7 +716,7 @@ const AsciiGradientMatrix = ({videoSrc = videoFile, hoveredStory = null, accentH
         }}>
           Video Error: {videoError.message || 'Failed to load video'}
           <br />
-          <small>Source: {videoSrc}</small>
+          <small>Source: {selectedVideo}</small>
         </div>
       )}
     </div>

@@ -9,7 +9,7 @@ const MobileShader = lazy(() => import('../components/MobileShader'));
 // Get all stories from MDX files
 const stories = getAllStories()
 
-// Hash function to map story slug to hue value
+// Hash function to map story slug to more interesting hue values
 const hashStringToHue = (str) => {
   if (!str) return 155; // default sea-green
   let hash = 0;
@@ -18,14 +18,40 @@ const hashStringToHue = (str) => {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
-  // Map to range 120-220 (green to cyan to blue to purple)
-  return 120 + Math.abs(hash) % 100;
+  
+  // Create more interesting color palettes with distinct ranges
+  const colorPalettes = [
+    [280, 320], // Purple to magenta
+    [200, 240], // Blue to indigo
+    [340, 20],  // Red to pink (wraps around)
+    [45, 75],   // Orange to yellow
+    [120, 160], // Green to teal
+    [180, 220], // Cyan to blue
+    [300, 340], // Magenta to red
+    [60, 90],   // Yellow to lime
+  ];
+  
+  // Select palette based on hash
+  const paletteIndex = Math.abs(hash) % colorPalettes.length;
+  const [minHue, maxHue] = colorPalettes[paletteIndex];
+  
+  // Handle wrap-around for red-pink palette
+  if (maxHue < minHue) {
+    const range = (360 - minHue) + maxHue;
+    const offset = Math.abs(hash) % range;
+    return offset <= (360 - minHue) ? minHue + offset : offset - (360 - minHue);
+  }
+  
+  // Normal range calculation
+  const range = maxHue - minHue;
+  return minHue + (Math.abs(hash) % range);
 };
 
 export default function Home() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoveredStory, setHoveredStory] = useState(null);
   const [accentHue, setAccentHue] = useState(155);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -38,12 +64,74 @@ export default function Home() {
 
   const handleStoryHover = (storySlug) => {
     setHoveredStory(storySlug);
-    setAccentHue(hashStringToHue(storySlug));
+    setIsTransitioning(true);
+    
+    // Smooth color transition with 1 second duration
+    const targetHue = hashStringToHue(storySlug);
+    const startHue = accentHue;
+    const startTime = Date.now();
+    const duration = 1000; // 1 second
+    
+    const animateHue = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth transition
+      const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+      
+      // Calculate shortest path between hues (handles wrap-around)
+      let diff = targetHue - startHue;
+      if (Math.abs(diff) > 180) {
+        diff = diff > 0 ? diff - 360 : diff + 360;
+      }
+      
+      const currentHue = startHue + (diff * easedProgress);
+      setAccentHue(((currentHue % 360) + 360) % 360); // Normalize to 0-360
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateHue);
+      } else {
+        setIsTransitioning(false);
+      }
+    };
+    
+    requestAnimationFrame(animateHue);
   };
 
   const handleStoryLeave = () => {
     setHoveredStory(null);
-    setAccentHue(155); // Reset to default sea-green
+    setIsTransitioning(true);
+    
+    // Smooth transition back to default
+    const targetHue = 155; // default sea-green
+    const startHue = accentHue;
+    const startTime = Date.now();
+    const duration = 1000; // 1 second
+    
+    const animateHue = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth transition
+      const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+      
+      // Calculate shortest path between hues (handles wrap-around)
+      let diff = targetHue - startHue;
+      if (Math.abs(diff) > 180) {
+        diff = diff > 0 ? diff - 360 : diff + 360;
+      }
+      
+      const currentHue = startHue + (diff * easedProgress);
+      setAccentHue(((currentHue % 360) + 360) % 360); // Normalize to 0-360
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateHue);
+      } else {
+        setIsTransitioning(false);
+      }
+    };
+    
+    requestAnimationFrame(animateHue);
   };
 
   return (
@@ -100,7 +188,7 @@ export default function Home() {
                       </Suspense>
                     </div>
                   )}
-                  <article className={`relative p-4 sm:p-6 rounded-lg transition-all duration-300 ${
+                  <article className={`relative p-4 sm:p-6 rounded-lg transition-all duration-1000 ${
                     index === 0 
                       ? 'bg-foreground/5 backdrop-blur-[2px] hover:bg-foreground/10 min-h-[120px] sm:min-h-[140px] flex flex-col justify-center p-12 sm:p-8 hover:scale-[1.01] hover:backdrop-blur-[3px] active:scale-[0.99] cursor-pointer' 
                       : 'hover:bg-foreground/5 border border-foreground/5'
@@ -140,13 +228,13 @@ export default function Home() {
                     onMouseEnter={() => handleStoryHover(story.slug)}
                     onMouseLeave={handleStoryLeave}
                   >
-                    <article className="text-right transition-all duration-500 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
+                    <article className="text-right transition-all duration-1000 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
                       {index === 0 && (
                         <div className="absolute -right-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse"></div>
                       )}
-                      <div className={`absolute right-0 top-1/2 w-0 h-px transform translate-x-full group-hover:w-16 transition-all duration-700 delay-100 ${index === 0 ? 'bg-gradient-to-l from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-l from-foreground/30 to-transparent'}`} 
+                      <div className={`absolute right-0 top-1/2 w-0 h-px transform translate-x-full group-hover:w-16 transition-all duration-1000 delay-100 ${index === 0 ? 'bg-gradient-to-l from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-l from-foreground/30 to-transparent'}`} 
                            style={{ transform: 'translateX(100%)' }}></div>
-                      <h3 className={`tracking-wide mb-2 group-hover:translate-x-[-4px] transition-transform duration-300 ${index === 0 ? 'text-xl font-light' : 'text-lg font-extralight'}`} 
+                      <h3 className={`tracking-wide mb-2 group-hover:translate-x-[-4px] transition-transform duration-1000 ${index === 0 ? 'text-xl font-light' : 'text-lg font-extralight'}`} 
                           style={{color: 'hsl(var(--foreground))'}}>
                         {story.title}
                       </h3>
@@ -191,12 +279,12 @@ export default function Home() {
                     onMouseEnter={() => handleStoryHover(story.slug)}
                     onMouseLeave={handleStoryLeave}
                   >
-                    <article className="text-left transition-all duration-500 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
+                    <article className="text-left transition-all duration-1000 relative p-6 rounded-lg group-hover:scale-[1.02] group-hover:bg-foreground/3 group-hover:backdrop-blur-sm transform-gpu">
                       {index === 0 && (
                         <div className="absolute -left-2 top-1/2 w-2 h-2 rounded-full bg-[hsla(150,60%,80%,0.6)] animate-pulse"></div>
                       )}
-                      <div className={`absolute left-0 top-1/2 w-0 h-px transform -translate-x-full group-hover:w-16 transition-all duration-700 delay-100 ${index === 0 ? 'bg-gradient-to-r from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-r from-foreground/30 to-transparent'}`}></div>
-                      <h3 className={`tracking-wide mb-2 group-hover:translate-x-[4px] transition-transform duration-300 ${index === 0 ? 'text-xl font-light' : 'text-lg font-extralight'}`} 
+                      <div className={`absolute left-0 top-1/2 w-0 h-px transform -translate-x-full group-hover:w-16 transition-all duration-1000 delay-100 ${index === 0 ? 'bg-gradient-to-r from-[hsla(150,60%,80%,0.6)] to-transparent' : 'bg-gradient-to-r from-foreground/30 to-transparent'}`}></div>
+                      <h3 className={`tracking-wide mb-2 group-hover:translate-x-[4px] transition-transform duration-1000 ${index === 0 ? 'text-xl font-light' : 'text-lg font-extralight'}`} 
                           style={{color: 'hsl(var(--foreground))'}}>
                         {story.title}
                       </h3>
