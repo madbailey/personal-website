@@ -10,11 +10,10 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                'serif': ['Crimson Text', 'Georgia', 'Times New Roman', 'serif'], // Keep your choice or pick one like Palatino
-                'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                'serif': ['Playfair Display', 'Georgia', 'Times New Roman', 'serif'],
+                'sans': ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
                 'mono': ['JetBrains Mono', 'Monaco', 'Consolas', 'monospace'],
-                // Add a specific font if you want the 'et-book' look (you'd need to self-host it)
-                // 'et-book': ['et-book', 'Palatino', 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', 'Georgia', 'serif'],
+                'display': ['Playfair Display', 'Georgia', 'serif'],
             },
             colors: {
                 // --- ADOPTING THE HSL CUSTOM PROPERTY APPROACH ---
