@@ -7,6 +7,7 @@ const shaderComponents = {
   PineConeDelicate: lazy(() => import('../components/PineConeDelicate')),
   AnalogCube: lazy(() => import('../components/AnalogCube')),
   EmotionalDepth: lazy(() => import('../components/EmotionalDepth')),
+  WashingOff: lazy(() => import('../components/WashingOff')),
   // Add more shaders here as needed
 };
 
